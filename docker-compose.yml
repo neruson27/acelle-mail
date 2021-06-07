@@ -1,0 +1,19 @@
+version: '3.9'
+
+services:
+  server:
+    build:
+      context: .
+    command: "server"
+    ports:
+      - "8080:8080"
+    container_name: server
+  listener:
+    build:
+      context: .
+    command: "listener"
+    container_name: listener
+
+#  rabbitMQ:
+#    image: rabbitmq
+#    container_name: rabbitmq6
