@@ -14,9 +14,8 @@ func setSettings() {
 		AppName: "cliengo-acelle-mail",
 		Secret:  "your-256-bit-secret",
 
-		LoggerCode:         "zap",
-		LoggerLevel:        "debug",
-		LoggerEnableCaller: true,
+		LoggerCode:  "zap",
+		LoggerLevel: "debug",
 
 		LoggerZapEncoding:                "console",
 		LoggerZapDevelopment:             true,
@@ -24,7 +23,7 @@ func setSettings() {
 		LoggerZapEncoderConfigKeyLevel:   "level",
 		LoggerZapEncoderConfigKeyTime:    "ts",
 		LoggerZapEncoderConfigKeyName:    "logger",
-		LoggerZapEncoderConfigKeyCaller:  "fn",
+		LoggerZapEncoderConfigKeyCaller:  "",
 
 		//Prod
 		//MongoDBUrl: "mongodb+srv://CLIENGOPROD_READONLY:AwUzKcGk3LO5Zv9Q@prod-cliengo-core.9szjk.mongodb.net/?authSource=admin&readPreference=primary&appname=MongoDB%20Compass&ssl=true",

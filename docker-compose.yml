@@ -13,7 +13,3 @@ services:
       context: .
     command: "listener"
     container_name: listener
-
-#  rabbitMQ:
-#    image: rabbitmq
-#    container_name: rabbitmq6

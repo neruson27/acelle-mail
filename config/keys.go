@@ -4,9 +4,8 @@ const (
 	AppName = "app.name"
 	Secret  = "secret"
 
-	LoggerCode         = "logger.code"
-	LoggerLevel        = "logger.level"
-	LoggerEnableCaller = "logger.enable.caller"
+	LoggerCode  = "logger.code"
+	LoggerLevel = "logger.level"
 
 	LoggerZapEncoding                   = "logger.zap.encoding"
 	LoggerZapDevelopment                = "logger.zap.development"
