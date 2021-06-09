@@ -1,0 +1,7 @@
+build:
+  docker:
+    images: Dockerfile
+  run:
+    web: "server"
+    listener: "listener"
+    jobs: "jobs"
