@@ -32,7 +32,7 @@ func (ac AccountService) MakeCompanyIntegration(company model.Company) error {
 		return nil
 	}
 
-	apiToken, accountID, err := ac.integration.CreateAccount(company)
+	apiToken, accountID, err := ac.integration.NewCustomer(company)
 	if err != nil {
 		return errors.Wrap(err, "account service")
 	}
@@ -48,7 +48,7 @@ func (ac AccountService) MakeCompanyIntegration(company model.Company) error {
 		return errors.Wrap(err, "account service")
 	}
 
-	mainListUID, err := ac.integration.CreateMainList(company)
+	mainListUID, err := ac.integration.NewMainList(company)
 	if err != nil {
 		return errors.Wrap(err, "account service")
 	}
@@ -58,7 +58,7 @@ func (ac AccountService) MakeCompanyIntegration(company model.Company) error {
 		return errors.Wrap(err, "account service")
 	}
 
-	if err = ac.integration.CreateFieldsMainList(company); err != nil {
+	if err = ac.integration.NewCustomFields(company); err != nil {
 		return errors.Wrap(err, "account service")
 	}
 
@@ -66,7 +66,7 @@ func (ac AccountService) MakeCompanyIntegration(company model.Company) error {
 }
 
 func (ac AccountService) setCompanyPlan(company model.Company) error {
-	plans, err := ac.integration.GetPlans()
+	plans, err := ac.integration.RetrievePlans()
 	if err != nil {
 		return errors.Wrap(err, "service")
 	}
@@ -88,7 +88,7 @@ func (ac AccountService) setCompanyPlan(company model.Company) error {
 		return errors.New("not found any plan to set")
 	}
 
-	if err = ac.integration.AssignPlan(company, uidPlan); err != nil {
+	if err = ac.integration.AssignCustomerPlan(company, uidPlan); err != nil {
 		return errors.New("service fail")
 	}
 	return nil

@@ -20,12 +20,12 @@ type (
 		logger logger.Logger
 	}
 
-	acelleApiToken struct {
+	loginResponseAM struct {
 		Token string `json:"token"`
 		URL   string `json:"url"`
 	}
 
-	acelleNewAccount struct {
+	customerAM struct {
 		ApiToken      string `json:"api_token"`
 		Email         string `json:"email"`
 		FirstName     string `json:"first_name"`
@@ -37,7 +37,12 @@ type (
 		TextDirection string `json:"text-direction"`
 	}
 
-	acelleMainListContact struct {
+	customerResponseAM struct {
+		CustomerID string `json:"customer_uid"`
+		ApiToken   string `json:"api_token"`
+	}
+
+	contactAM struct {
 		Company   string `json:"company"`
 		State     string `json:"state"`
 		City      string `json:"city"`
@@ -48,15 +53,21 @@ type (
 		Email     string `json:"email"`
 	}
 
-	acelleMainList struct {
-		ApiToken                string                `json:"api_token"`
-		Name                    string                `json:"name"`
-		SubscribeConfirmation   int                   `json:"subscribe_confirmation"`
-		SendWelcomeEmail        int                   `json:"send_welcome_email"`
-		UnsubscribeNotification int                   `json:"unsubscribe_notification"`
-		FromEmail               string                `json:"from_email"`
-		FromName                string                `json:"from_name"`
-		Contact                 acelleMainListContact `json:"contact"`
+	listAM struct {
+		ApiToken                string    `json:"api_token"`
+		Name                    string    `json:"name"`
+		SubscribeConfirmation   int       `json:"subscribe_confirmation"`
+		SendWelcomeEmail        int       `json:"send_welcome_email"`
+		UnsubscribeNotification int       `json:"unsubscribe_notification"`
+		FromEmail               string    `json:"from_email"`
+		FromName                string    `json:"from_name"`
+		Contact                 contactAM `json:"contact"`
+	}
+
+	listResponseAM struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+		ListUID string `json:"list_uid"`
 	}
 
 	CustomFieldAC struct {
@@ -65,36 +76,24 @@ type (
 		Label    string `json:"label"`
 		Tag      string `json:"tag"`
 	}
-
-	responseNewAccount struct {
-		CustomerID string `json:"customer_uid"`
-		ApiToken   string `json:"api_token"`
-	}
-
-	responseMainList struct {
-		Status  int    `json:"status"`
-		Message string `json:"message"`
-		ListUID string `json:"list_uid"`
-	}
 )
 
 const (
-	PathGetLoginToken       = "%s/api/v1/login-token"
-	PathPostNewCustomer     = "%s/api/v1/customers"
-	PathPostAssignPlan      = "%s/api/v1/customers/%s/assign-plan/%s"
-	PathPostCreateList      = "%s/api/v1/lists"
-	PathPostAddField        = "%s/api/v1/lists/%s/add-field"
+	PathGetLoginToken       = "/api/v1/login-token"
+	PathPostNewCustomer     = "/api/v1/customers"
+	PathPostAssignPlan      = "/api/v1/customers/%s/assign-plan/%s"
+	PathPostCreateList      = "/api/v1/lists"
+	PathPostAddField        = "/api/v1/lists/%s/add-field"
 	PathGetPlans            = "/api/v1/plans"
 	PathGetExistingCustomer = "/api/v1/customers/getCustomerByEmail"
+	PathPostSubscriber      = "/api/v1/subscribers"
 )
 
 var (
-	acelleMailURI string
-	customFields  []CustomFieldAC
+	customFields []CustomFieldAC
 )
 
 func init() {
-	acelleMailURI = conf.GetString(config.AcelleMailURI)
 	customFields = []CustomFieldAC{
 		{Type: "text", Label: "Status", Tag: "STATUS"},
 		{Type: "text", Label: "Sub status", Tag: "SUB_STATUS"},
@@ -111,51 +110,16 @@ func init() {
 	}
 }
 
-func NewAcelleMailService(log logger.Logger) AcelleMailService {
+func NewAcelleMailService(logger logger.Logger) AcelleMailService {
 	return AcelleMailService{
-		logger: log,
+		logger: logger,
 	}
 }
 
-func (ams AcelleMailService) retrievePath(path string, parameters ...interface{}) string {
-	if len(parameters) == 0 {
-		return fmt.Sprintf(path, acelleMailURI)
-	}
-	return fmt.Sprintf(path, acelleMailURI, parameters)
-}
-
-func (ams AcelleMailService) postRequest(path string, body interface{}, result interface{}) error {
-	jsonData, err := json.Marshal(body)
-	if err != nil {
-		return errors.Wrap(err, "fail parsing post data")
-	}
-	ams.logger.Info(path)
-	ams.logger.Info(string(jsonData))
-	resp, err := http.Post(path, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return errors.Wrap(err, "something bad happen sending post request")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := ioutil.ReadAll(resp.Body)
-		message := fmt.Sprintf("fail to retrieve information from acelle mail, status: %d, response: %s", resp.StatusCode, respBody)
-		return errors.New(message)
-	}
-
-	if result == nil {
-		return nil
-	}
-
-	if err = json.NewDecoder(resp.Body).Decode(result); err != nil {
-		return errors.Wrap(err, "fail to decode result")
-	}
-	return nil
-}
-
-func (ams AcelleMailService) getRequest(relativeURL string, params map[string]string, results interface{}) error {
+func (ams AcelleMailService) getURL(relativeURL string, params map[string]string) (string, error) {
 	u, err := url.Parse(relativeURL)
 	if err != nil {
-		return errors.Wrap(err, "fail to parse url")
+		return "", errors.Wrap(err, "get-url parse fail relative")
 	}
 
 	if len(params) > 0 {
@@ -165,12 +129,48 @@ func (ams AcelleMailService) getRequest(relativeURL string, params map[string]st
 		}
 		u.RawQuery = queryString.Encode()
 	}
-	path, err := url.Parse(acelleMailURI)
+	path, err := url.Parse(conf.GetString(config.AcelleMailURI))
 	if err != nil {
-		return errors.Wrap(err, "fail to parse url")
+		return "", errors.Wrap(err, "get-url parse fail url")
 	}
 	uri := path.ResolveReference(u)
-	resp, err := http.Get(uri.String())
+	return uri.String(), nil
+}
+
+func (ams AcelleMailService) httpPost(uri string, body interface{}, result interface{}) error {
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		return errors.Wrap(err, "request body")
+	}
+
+	resp, err := http.Post(uri, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return errors.Wrap(err, "fail post request")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := ioutil.ReadAll(resp.Body)
+		message := fmt.Sprintf("fail request post, status: %d, response: %s", resp.StatusCode, respBody)
+		return errors.New(message)
+	}
+
+	if result == nil {
+		return nil
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(result); err != nil {
+		return errors.Wrap(err, "fail decoding post request response")
+	}
+	return nil
+}
+
+func (ams AcelleMailService) httpGet(relativeURL string, params map[string]string, results interface{}) error {
+	uri, err := ams.getURL(relativeURL, params)
+	if err != nil {
+		return err
+	}
+	resp, err := http.Get(uri)
 	if err != nil {
 		return errors.Wrap(err, "fail to retrieve information")
 	}
@@ -187,26 +187,36 @@ func (ams AcelleMailService) getRequest(relativeURL string, params map[string]st
 	return nil
 }
 
-func (ams AcelleMailService) RetrieveLoginPath(information model.Company) (model.ResponseIntegration, error) {
-	body := map[string]string{
+func (ams AcelleMailService) LoginPath(information model.Company) (model.ResponseIntegration, error) {
+
+	uri, err := ams.getURL(PathGetLoginToken, nil)
+	if err != nil {
+		return model.ResponseIntegration{}, errors.Wrap(err, "acelle-mail get login token")
+	}
+
+	var requestResponse loginResponseAM
+	requestBody := map[string]string{
 		"api_token": information.ApiToken,
 	}
-
-	var result acelleApiToken
-	uri := ams.retrievePath(PathGetLoginToken)
-	err := ams.postRequest(uri, body, &result)
-	if err != nil {
-		return model.ResponseIntegration{}, errors.Wrap(err, "retrieve login path")
+	if err = ams.httpPost(uri, requestBody, &requestResponse); err != nil {
+		return model.ResponseIntegration{}, errors.Wrap(err, "acelle-mail get login token")
 	}
 
-	return model.ResponseIntegration{URI: result.URL}, nil
+	return model.ResponseIntegration{URI: requestResponse.URL}, nil
 }
 
-func (ams AcelleMailService) CreateAccount(company model.Company) (string, string, error) {
-	data := acelleNewAccount{
+func (ams AcelleMailService) NewCustomer(company model.Company) (string, string, error) {
+
+	uri, err := ams.getURL(PathPostNewCustomer, nil)
+	if err != nil {
+		return "", "", errors.Wrap(err, "acelle-mail post new customer")
+	}
+
+	var requestResponse customerResponseAM
+	bodyRequest := customerAM{
 		ApiToken: conf.GetString(config.AcelleMailToken),
-		//Email:         company.Email,
-		Email:         "test+13@test.com",
+		Email:    company.Email,
+		//Email:         "test+13@test.com", //TODO: THIS IS FOR TESTS
 		FirstName:     company.Name,
 		LastName:      "-",
 		TimeZone:      "America/Argentina/Buenos_Aires", //TODO desharcodear
@@ -216,24 +226,21 @@ func (ams AcelleMailService) CreateAccount(company model.Company) (string, strin
 		TextDirection: company.ID.String(),              // para dejar el companyId en algún lado
 	}
 
-	var result responseNewAccount
-	uri := ams.retrievePath(PathPostNewCustomer)
-	if err := ams.postRequest(uri, data, &result); err != nil {
-		return "", "", errors.Wrap(err, "create new acelle mail account")
+	if err := ams.httpPost(uri, bodyRequest, &requestResponse); err != nil {
+		return "", "", errors.Wrap(err, "acelle-mail post new customer")
 	}
 
-	return result.ApiToken, result.CustomerID, nil
+	return requestResponse.ApiToken, requestResponse.CustomerID, nil
 }
 
-func (ams AcelleMailService) GetExistingEmail(company model.Company) (string, string, error) {
+func (ams AcelleMailService) NewMainList(company model.Company) (string, error) {
 
-	//var result responseNewAccount
+	uri, err := ams.getURL(PathPostCreateList, nil)
+	if err != nil {
+		return "", err
+	}
 
-	return "", "", nil
-}
-
-func (ams AcelleMailService) CreateMainList(company model.Company) (string, error) {
-	body := acelleMainList{
+	body := listAM{
 		ApiToken:                company.ApiToken,
 		Name:                    "Clientes Cliengo",
 		SubscribeConfirmation:   0,
@@ -241,7 +248,7 @@ func (ams AcelleMailService) CreateMainList(company model.Company) (string, erro
 		UnsubscribeNotification: 0,
 		FromEmail:               "automation@cliengomail.com",
 		FromName:                "Automation",
-		Contact: acelleMainListContact{
+		Contact: contactAM{
 			Company:   "Juan Perez",
 			State:     "Buenos Aires",
 			City:      "Buenos Aires",
@@ -253,45 +260,75 @@ func (ams AcelleMailService) CreateMainList(company model.Company) (string, erro
 		},
 	}
 
-	path := ams.retrievePath(PathPostCreateList)
-	var response responseMainList
-	if err := ams.postRequest(path, body, &response); err != nil {
-		return "", errors.Wrap(err, "fail to create main list")
+	var response listResponseAM
+	if err := ams.httpPost(uri, body, &response); err != nil {
+		return "", errors.Wrap(err, "acelle-mail post main list")
 	}
 	return response.ListUID, nil
 }
 
-func (ams AcelleMailService) CreateFieldsMainList(company model.Company) error {
+func (ams AcelleMailService) NewCustomFields(company model.Company) error {
+	uri, err := ams.getURL(fmt.Sprintf(PathPostAddField, company.MainListID), nil)
+	if err != nil {
+		return errors.Wrap(err, "acelle-mail post main list")
+	}
+
 	fields := customFields // se hace esta copia para no estar modificando el listado base
-	path := fmt.Sprintf(PathPostAddField, acelleMailURI, company.MainListID)
 	for index := range fields {
 		fields[index].ApiToken = company.ApiToken
-		if err := ams.postRequest(path, fields[index], nil); err != nil {
-			return errors.Wrap(err, "fail to create field")
+		if err := ams.httpPost(uri, fields[index], nil); err != nil {
+			return errors.Wrap(err, "acelle-mail post custom fields")
 		}
 	}
 	return nil
 }
 
-func (ams AcelleMailService) AssignPlan(company model.Company, planUID string) error {
+func (ams AcelleMailService) AssignCustomerPlan(company model.Company, planUID string) error {
+	uri, err := ams.getURL(fmt.Sprintf(PathPostAssignPlan, company.AccountID, planUID), nil)
+	if err != nil {
+		return errors.Wrap(err, "acelle-mail post assign plan")
+	}
 	body := map[string]string{
 		"api_token": conf.GetString(config.AcelleMailToken),
 		"gateway":   "direct",
 	}
-	path := fmt.Sprintf(PathPostAssignPlan, acelleMailURI, company.AccountID, planUID)
-	if err := ams.postRequest(path, body, nil); err != nil {
-		return errors.Wrap(err, "fail to add plan to account")
+
+	if err := ams.httpPost(uri, body, nil); err != nil {
+		return errors.Wrap(err, "acelle-mail post assign plan")
 	}
 	return nil
 }
 
-func (ams AcelleMailService) GetPlans() ([]model.AcelleMailPlan, error) {
+func (ams AcelleMailService) RetrievePlans() ([]model.AcelleMailPlan, error) {
 	results := make([]model.AcelleMailPlan, 0)
 	queryParams := map[string]string{
 		"api_token": conf.GetString(config.AcelleMailToken),
 	}
-	if err := ams.getRequest(PathGetPlans, queryParams, &results); err != nil {
-		return nil, errors.Wrap(err, "fail to retrieve acelle mail plans")
+	if err := ams.httpGet(PathGetPlans, queryParams, &results); err != nil {
+		return nil, errors.Wrap(err, "acelle-mail get plans")
 	}
 	return results, nil
+}
+
+func (ams AcelleMailService) SendSubscriber(company model.Company, contact model.Contact) error {
+	if company.MainListID == "" {
+		return errors.New("acelle-mail post subscriber. Not found main list id")
+	}
+
+	queryParam := map[string]string{
+		"list_uid": company.MainListID,
+	}
+	uri, err := ams.getURL(PathPostSubscriber, queryParam)
+
+	if err != nil {
+		return nil
+	}
+
+	var result interface{}
+	contact.ApiToken = company.ApiToken
+
+	if err := ams.httpPost(uri, contact, &result); err != nil {
+		return errors.Wrap(err, "acelle-mail post subscriber")
+	}
+	return nil
 }

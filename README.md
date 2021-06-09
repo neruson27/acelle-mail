@@ -9,12 +9,34 @@ El proyecto se divide en 3 partes para su ejecución
 
 ## Ejecución
 
-### Go build
-
 ### Make File (Linux)
 
+Para instalar Make se puede ejecutar el siguiente comando en consola
+```shell
+sudo apt-get install make
+```
+Make utiliza un archivo llamado `Makefile` el cual dispone de un grupo de comandos a ejecutar, se ha implementado esto
+para poder estar reduciendo tiempo de escritura/ejecución al momento de desarrollo.
+
+Este es el listado de comandos que se disponen:
+
+| Comando | Descripción |
+|:---:| :----|
+|build| genera el archivo binario del proyecto|
+|clean| elimina si existe el archivo binario |
+|all| Elimina, compila, ejecuta el proyecto mostrando la información de ayuda del mismo
+|server| Elimina, compila, inicia el servidor http |
+|listener | Elimina, compila, inicia el escuchador de cambios de streams de base de datos |
+| jobs | Elimina, compila, inicia los jobs de integración de companies y de sincronización de contacts|
+
+Uso:
+```shell
+make build # Unicamente genera el archivo binario del proyecto
+make jobs # Elimina si existe el binario, compila el proyecto y ejecuta el proyecto desde los jobs
+```
+
 ### Docker
-Se tiene la creación de un contenedor de docker por medio de un `DockerFile` y al mismo tiempo la separacion de los
+Se tiene la creación de un contenedor de docker por medio de un `DockerFile` y al mismo tiempo la separación de los
 diferentes divisiones del proyecto por medio de un `docker-compose.yml`.
 
 Por medio del docker-compose se puede estar haciendo el build del contenedor y posterior levantar todos los servicios
@@ -38,6 +60,7 @@ docker-compose up server
 Los servicios que se poseen son
 1. server
 1. listener
+1. jobs
 
 # Variables de Entorno
 El proyecto tiene configuraciones con valores default, pero las mismas pueden estar siendo modificadas mediante

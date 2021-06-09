@@ -53,7 +53,7 @@ func (ih IntegrationHandler) getInformation(w http.ResponseWriter, r *http.Reque
 		information, _ = ih.information.GetIntegrationInfo(companyID)
 	}
 
-	resultInfo, err := ih.integration.RetrieveLoginPath(information)
+	resultInfo, err := ih.integration.LoginPath(information)
 	if err != nil {
 		//TODO: Manejar el error
 		ih.logger.Info("error con acelle mail")

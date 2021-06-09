@@ -15,7 +15,7 @@ type (
 	streamProcessor struct {
 		Key      string
 		Watcher  func(resumeToken *primitive.ObjectID) (*mongo.ChangeStream, error)
-		Executor func(stream bson.M) (primitive.ObjectID, error)
+		Executor func(stream bson.M) error
 	}
 
 	StreamsListener struct {
@@ -41,25 +41,13 @@ func (sl StreamsListener) Run(ctx context.Context) {
 		go sl.execute(ctx, waitGroup, streamProcessor)
 	}
 	waitGroup.Wait()
-	//for {
-	//	select {
-	//	case <-ctx.Done():
-	//		sl.logger.Infof("ending process")
-	//		return
-	//	default:
-	//		sl.logger.Info("Hello world")
-	//		time.Sleep(time.Millisecond * 100)
-	//	}
-	//
-	//}
 }
 
 // Retorna el listado de los watchers para los stream changes
 func (sl StreamsListener) retrieveStreamsProcessors() []streamProcessor {
 	return []streamProcessor{
 		//{Key: "company-update", Watcher: sl.repository.WatcherUpdatesCompanyPlan, Executor: sl.service.ProcessUpdateCompany},
-		//{Key: "contact-new", Watcher: sl.repository.WatcherNewContact, Executor: sl.service.ProcessNewContact},
-		{Key: "contact-update", Watcher: sl.repository.WatcherContactEvents, Executor: sl.service.ProcessContactEvent},
+		{Key: "contacts", Watcher: sl.repository.WatcherContactEvents, Executor: sl.service.ProcessContactEvent},
 	}
 }
 
@@ -83,42 +71,15 @@ func (sl StreamsListener) execute(ctx context.Context, waitGroup sync.WaitGroup,
 	defer cs.Close(ctx)
 	sl.logger.Infof("Starting cs, key: %s", processor.Key)
 	for cs.Next(ctx) {
+		sl.logger.Info(cs.ResumeToken())
 		var data bson.M
 		if err = cs.Decode(&data); err != nil {
 			sl.logger.Errorf("fail to process stream, %s", err)
 
 		} else {
-			_, _ = processor.Executor(data)
+			//TODO: Pendiente de manejar el Resumen token y el err que se genera
+			_ = processor.Executor(data)
 		}
 	}
-	//HandleLoop: //Handling change stream in a cycle
-	//	for {
-	//		for cs.Next(ctx) {
-	//			select {
-	//			case <-ctx.Done(): // If parent context was cancelled
-	//				err := cs.Close(ctx)
-	//				if err != nil {
-	//					sl.logger.Errorf("change stream closed, error: %s", err)
-	//				}
-	//				break HandleLoop
-	//			default:
-	//				var data bson.M
-	//
-	//				if err := cs.Decode(&data); err != nil {
-	//					sl.logger.Errorf("%s, fail to process change stream, error: %s", processor.Key, err)
-	//					continue
-	//				}
-	//
-	//				resumeToken, err := processor.Executor(data)
-	//				if err != nil {
-	//					sl.logger.Errorf("%s, fail to process change stream, error: %s", processor.Key, err)
-	//					continue
-	//				}
-	//
-	//				if err = sl.repository.StoreCheckPoint(processor.Key, resumeToken); err != nil {
-	//					sl.logger.Errorf("%s, fail to save checkpoint, error: %s", processor.Key, err)
-	//				}
-	//			}
-	//		}
-	//	}
+
 }

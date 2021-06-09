@@ -1,14 +1,21 @@
-all: clean build
-	./acelle-mail help
+BUILD_FILE=acelle-mail
+
+RUN_FILE=./$(BUILD_FILE)
 
 build:
-	go build -ldflags "-s -w -extldflags '-static'" -o acelle-mail
+	go build -ldflags "-s -w -extldflags '-static'" -o $(BUILD_FILE)
 
 clean:
-	rm -f acelle-mail
+	rm -f $(BUILD_FILE)
+
+all: clean build
+	$(RUN_FILE) help
 
 listener: clean build
-	./acelle-mail listener
+	$(RUN_FILE) listener
 
 server: clean build
-	./acelle-mail server
+	$(RUN_FILE) server
+
+jobs: clean build
+	$(RUN_FILE) jobs

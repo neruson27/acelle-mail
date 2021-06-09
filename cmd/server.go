@@ -18,12 +18,12 @@ var serverCmd = &cobra.Command{
 func runServerCmd(cmd *cobra.Command, args []string) {
 	httpClient, err := container.NewServer()
 	if err != nil {
-		logger.Log.Errorf("Fail to retrieve all config: %s'", err)
+		logger.Log.Errorf("Fail to retrieve all config: %s'", err.Error())
 	}
 
 	go func() {
 		if err := httpClient.ListAndServe(); err != nil {
-			logger.Log.Errorf("Server error: %s", err)
+			logger.Log.Errorf("Server error: %s", err.Error())
 		}
 	}()
 	logger.Log.Info("Server started")

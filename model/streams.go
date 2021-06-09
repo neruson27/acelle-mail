@@ -15,7 +15,7 @@ type (
 	}
 
 	changeID struct {
-		Data string `bson:"_data"`
+		ResumeToken string `bson:"_data"`
 	}
 
 	StreamCompany struct {

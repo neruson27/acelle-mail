@@ -1,15 +1,41 @@
 version: '3.9'
 
+x-build:
+  &build-settings
+  build:
+    context: .
+
+
 services:
+
+  redis:
+    image: "redis:latest"
+    container_name: cache
+    hostname: cache
+    ports:
+      - "6379:6379"
+
   server:
-    build:
-      context: .
+    <<: *build-settings
     command: "server"
     ports:
       - "8080:8080"
     container_name: server
+
+    depends_on:
+      - redis
+
   listener:
-    build:
-      context: .
+    <<: *build-settings
     command: "listener"
     container_name: listener
+
+    depends_on:
+      - redis
+
+  jobs:
+    <<: *build-settings
+    command: "jobs"
+    container_name: jobs
+    depends_on:
+      - redis

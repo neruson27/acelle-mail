@@ -6,6 +6,7 @@ package container
 import (
 	"github.com/Cliengo/acelle-mail/container/logger"
 	"github.com/Cliengo/acelle-mail/infrastructure/http"
+	"github.com/Cliengo/acelle-mail/infrastructure/jobs"
 	"github.com/Cliengo/acelle-mail/infrastructure/listener"
 	"github.com/Cliengo/acelle-mail/repository"
 	"github.com/Cliengo/acelle-mail/repository/mongo"
@@ -41,4 +42,9 @@ func NewServer() (http.Server, error) {
 func NewListener() (listener.StreamsListener, error) {
 	wire.Build(logger.GetLogger, repositorySet, servicesSet, listener.New)
 	return listener.StreamsListener{}, nil
+}
+
+func NewJobs() jobs.Job {
+	wire.Build(logger.GetLogger, jobs.New)
+	return jobs.Job{}
 }
